@@ -1,3 +1,7 @@
 /target
 *.swp
 /target
+/bin/
+.classpath
+.project
+.settings
