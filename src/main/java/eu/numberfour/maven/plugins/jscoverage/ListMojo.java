@@ -11,6 +11,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.TimeZone;
 
 import org.apache.maven.plugin.AbstractMojo;
@@ -120,9 +122,10 @@ public class ListMojo extends AbstractMojo {
 
 		JsonArray array = new JsonArray();
 		FileSystem fileSystem = FileSystems.getDefault();
-		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-
+		Set<String> unrecognizedFields = new HashSet<>();
+		
 		try (FileWriter fileWriter = new FileWriter(this.outputFile)) {
 
 			String[] includedFiles = scanner.getIncludedFiles();
@@ -146,6 +149,9 @@ public class ListMojo extends AbstractMojo {
 						element.addProperty(field, dateFormat.format(
 								new Date(((FileTime) Files.getAttribute(file, "basic:lastModifiedTime")).toMillis())));
 						break;
+					default:
+						if (unrecognizedFields.add(field))
+							log.warn("Field name \"" + field + "\" not recognized.");
 					}
 				array.add(element);
 			}
