@@ -2,12 +2,24 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>eu.numberfour.maven.plugins</groupId>
+	
+	<groupId>it.bancaditalia.oss</groupId>
 	<artifactId>file-list-maven-plugin</artifactId>
 	<version>1.2.0</version>
 	<packaging>maven-plugin</packaging>
+	
 	<name>File Listing Plugin</name>
+	<description>This plugin creates a json or xml file whose entries are files in a specified folder.</description>
+	<url>https://github.com/vpinna80/file-list-maven-plugin</url>
 
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+	
 	<parent>
 		<groupId>org.sonatype.oss</groupId>
 		<artifactId>oss-parent</artifactId>
@@ -20,7 +32,26 @@
 			<name>Leonard Ehrenfried</name>
 			<email>leonard.ehrenfried@web.de</email>
 		</developer>
+		<developer>
+			<name>Valentino Pinna</name>
+			<email>valentino.pinna@bancaditalia.it</email>
+			<organization>Banca d'Italia</organization>
+			<organizationUrl>http://www.bancaditalia.it/</organizationUrl>
+		</developer>
 	</developers>
+
+	<scm>
+		<connection>scm:git:git://github.com/vpinna80/file-list-maven-plugin.git</connection>
+		<developerConnection>scm:git:ssh://github.com/vpinna80/file-list-maven-plugin.git</developerConnection>
+		<url>https://github.com/vpinna80/file-list-maven-plugin</url>
+	</scm>
+
+	<distributionManagement>
+		<repository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</repository>
+	</distributionManagement>
 
 	<properties>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -28,27 +59,11 @@
 		<maven.compiler.target>1.8</maven.compiler.target>
 	</properties>
 
-	<url>https://github.com/NumberFour/file-list-maven-plugin#readme</url>
-
-	<scm>
-		<connection>scm:git:git://github.com/NumberFour/file-list-maven-plugin.git</connection>
-		<developerConnection>scm:git:git@github.com:NumberFour/file-list-maven-plugin.git</developerConnection>
-		<url>https://github.com/NumberFour/file-list-maven-plugin#readme</url>
-	</scm>
-
-	<licenses>
-		<license>
-			<name>The Apache Software License, Version 2.0</name>
-			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
-
 	<dependencies>
 		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-			<version>1.7.1</version>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20160212</version>
 		</dependency>
 
 		<!--Maven plugin artifacts -->
@@ -79,80 +94,55 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-plugin-plugin</artifactId>
-				<version>2.7</version>
+				<version>3.5</version>
 				<executions>
 					<execution>
 						<id>exec-plugin-doc</id>
 						<phase>generate-sources</phase>
 						<goals>
-							<goal>xdoc</goal>
 							<goal>helpmojo</goal>
 						</goals>
 					</execution>
 				</executions>
 			</plugin>
 			<plugin>
-				<artifactId>maven-site-plugin</artifactId>
-				<version>2.2</version>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.0.1</version>
 				<executions>
 					<execution>
-						<phase>package</phase>
+						<id>attach-sources</id>
 						<goals>
-							<goal>site</goal>
+							<goal>jar-no-fork</goal>
 						</goals>
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.6</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<version>1.6.8</version>
+				<extensions>true</extensions>
+				<configuration>
+					<serverId>ossrh</serverId>
+					<nexusUrl>https://oss.sonatype.org/</nexusUrl>
+					<autoReleaseAfterClose>true</autoReleaseAfterClose>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
-
-	<reporting>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-site-plugin</artifactId>
-				<version>2.2</version>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-plugin-plugin</artifactId>
-				<version>2.5.1</version>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-project-info-reports-plugin</artifactId>
-				<version>2.1</version>
-				<configuration>
-					<dependencyLocationEnabled>false</dependencyLocationEnabled>
-				</configuration>
-				<reportSets>
-					<reportSet>
-						<reports>
-							<report>project-team</report>
-							<report>mailing-list</report>
-							<report>cim</report>
-							<report>issue-tracking</report>
-							<report>license</report>
-							<report>scm</report>
-						</reports>
-					</reportSet>
-				</reportSets>
-			</plugin>
-		</plugins>
-	</reporting>
-
-	<distributionManagement>
-		<snapshotRepository>
-			<id>snapshots</id>
-			<name>Hosted Snapshot</name>
-			<url>http://repository.corp.numberfour.eu/nexus/content/repositories/snapshots</url>
-			<uniqueVersion>false</uniqueVersion>
-		</snapshotRepository>
-		<site>
-			<id>gh-pages</id>
-			<!-- This gets automatically pushed to the gh-pages branch. -->
-			<url>file:${project.basedir}/site</url>
-		</site>
-	</distributionManagement>
-
 </project>

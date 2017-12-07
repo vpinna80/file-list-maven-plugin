@@ -1,11 +1,13 @@
-package eu.numberfour.maven.plugins.jscoverage;
+package it.bancaditalia.oss.plugins;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -15,16 +17,23 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
 
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerFactoryConfigurationError;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
+
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.DirectoryScanner;
-
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.XML;
 
 /**
  * <p>
@@ -43,10 +52,15 @@ public class ListMojo extends AbstractMojo {
 	public static final String NEW_LINE = System.getProperty("line.separator");
 	public static final String FILE_SEPARATOR = System.getProperty("file.separator");
 
+	public static enum Field
+	{
+		name, size, creationTime, lastModifiedTime 
+	}
+	
 	/**
 	 * The Maven project.
 	 * 
-	 * @parameter expression="${project}"
+	 * @parameter property="${project}"
 	 * @required
 	 * @readonly
 	 */
@@ -87,9 +101,11 @@ public class ListMojo extends AbstractMojo {
 	 * 
 	 * @parameter
 	 */
-	public String[] fields = { "name" };
+	public Field[] fields = { Field.name };
 
 	/**
+	 * xml or json (default)
+	 * 
 	 * @parameter default-value="json"
 	 */
 	public String type;
@@ -97,12 +113,15 @@ public class ListMojo extends AbstractMojo {
 	/**
 	 * Whether to ignore case
 	 * 
-	 * @parameter
+	 * @parameter default-value=false
 	 */
 	public boolean caseSensitive;
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
+
+		if ("xml".equals(type))
+			this.outputFile = this.outputFile.replace(".json", ".xml");
 
 		Log log = getLog();
 		log.info("");
@@ -120,46 +139,58 @@ public class ListMojo extends AbstractMojo {
 		scanner.setCaseSensitive(this.caseSensitive);
 		scanner.scan();
 
-		JsonArray array = new JsonArray();
+		JSONArray array = new JSONArray();
 		FileSystem fileSystem = FileSystems.getDefault();
 		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 		Set<String> unrecognizedFields = new HashSet<>();
 		
+		try {
+			Files.createDirectories(Paths.get(this.outputFile).getParent());
+		} catch (IOException e) {
+			throw new MojoExecutionException("Could not create build directory", e);
+		}
+
 		try (FileWriter fileWriter = new FileWriter(this.outputFile)) {
 
 			String[] includedFiles = scanner.getIncludedFiles();
 
 			for (String fileName : includedFiles) {
 				Path file = fileSystem.getPath(baseDir, fileName);
-				JsonObject element = new JsonObject();
-				for (String field : fields)
+				JSONObject element = new JSONObject();
+				for (Field field : fields)
 					switch (field) {
-					case "name":
-						element.addProperty(field, fileName);
+					case name:
+						element.put(field.toString(), fileName);
 						break;
-					case "size":
-						element.addProperty(field, (Long) Files.getAttribute(file, "basic:size"));
+					case size:
+						element.put(field.toString(), (Long) Files.getAttribute(file, "basic:size"));
 						break;
-					case "creationTime":
-						element.addProperty(field, dateFormat.format(
+					case creationTime:
+						element.put(field.toString(), dateFormat.format(
 								new Date(((FileTime) Files.getAttribute(file, "basic:creationTime")).toMillis())));
 						break;
-					case "lastModifiedTime":
-						element.addProperty(field, dateFormat.format(
+					case lastModifiedTime:
+						element.put(field.toString(), dateFormat.format(
 								new Date(((FileTime) Files.getAttribute(file, "basic:lastModifiedTime")).toMillis())));
 						break;
 					default:
-						if (unrecognizedFields.add(field))
+						if (unrecognizedFields.add(field.toString()))
 							log.warn("Field name \"" + field + "\" not recognized.");
 					}
-				array.add(element);
+				array.put(element);
 			}
 
-			log.info("File list contains " + array.size() + " files");
+			log.info("File list contains " + array.length() + " files");
 
 			if ("json".equals(this.type)) {
-				fileWriter.write(new GsonBuilder().setPrettyPrinting().create().toJson(array));
+				fileWriter.write(array.toString(4));
+			} else if ("xml".equals(this.type)) {
+				Transformer transformer = TransformerFactory.newInstance().newTransformer();
+				transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+				transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+				StreamSource source = new StreamSource(new StringReader("<files>" + XML.toString(array, "file") + "</files>"));
+				transformer.transform(source, new StreamResult(fileWriter));
 			} else if ("junit".equals(this.type)) {
 				StringBuilder suiteContent = new StringBuilder();
 				suiteContent.append("package n4.quat.selenium.acceptancetest.suites;");
@@ -196,8 +227,8 @@ public class ListMojo extends AbstractMojo {
 				suiteContent.append(NEW_LINE);
 				fileWriter.write(suiteContent.toString());
 			}
-		} catch (IOException ex) {
-			throw new MojoFailureException("Could not write output file.");
+		} catch (IOException | TransformerFactoryConfigurationError | TransformerException ex) {
+			throw new MojoExecutionException("Could not write output file", ex);
 		}
 	}
 }
