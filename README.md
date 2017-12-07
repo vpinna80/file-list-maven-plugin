@@ -1,8 +1,10 @@
-#Maven file list plugin
+Maven file list plugin
+====
 
 The plugin generates an xml or json file whose entries are individual files in a specified folder.
 
-#Usage:
+Usage:
+----
 
 | Name          | Type       | Default value                          | Description                                              |
 | ------------- | ---------- | -------------------------------------- | -------------------------------------------------------- |
