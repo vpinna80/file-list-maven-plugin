@@ -29,7 +29,11 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.project.MavenProject;
+import org.apache.maven.plugins.annotations.Execute;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -42,11 +46,10 @@ import org.json.XML;
  * </p>
  * 
  * @author <a href="mailto:leonard.ehrenfried@web.de">Leonard Ehrenfried</a>
- * 
- * @goal list
- * @requiresDependencyResolution compile
- * @description Creates a JSON-formatted list of files
  */
+@Mojo( name = "list", aggregator = false, defaultPhase = LifecyclePhase.PROCESS_RESOURCES,
+		requiresDependencyResolution = ResolutionScope.COMPILE, requiresOnline = false, requiresProject = false)
+@Execute( goal = "list", phase = LifecyclePhase.PROCESS_RESOURCES )
 public class ListMojo extends AbstractMojo {
 
 	public static final String NEW_LINE = System.getProperty("line.separator");
@@ -58,68 +61,56 @@ public class ListMojo extends AbstractMojo {
 	}
 	
 	/**
-	 * The Maven project.
-	 * 
-	 * @parameter property="${project}"
-	 * @required
-	 * @readonly
-	 */
-	private MavenProject project;
-	/**
 	 * File into which to save the output of the transformation.
-	 * 
-	 * @parameter default-value="${basedir}/target/file-list.json"
 	 */
+	@Parameter(defaultValue="${basedir}/target/file-list.json")
 	private String outputFile;
+
 	/**
 	 * Base directory of the scanning process
-	 * 
-	 * @parameter default-value="${basedir}/target/"
 	 */
-	public String baseDir;
+	@Parameter(defaultValue="${basedir}/target/")
+	private String baseDir;
+
 	/**
 	 * Ant-style include pattern.
 	 * 
 	 * For example **.* is all files
-	 * 
-	 * @parameter
 	 */
-	public String[] includes;
+	@Parameter
+	private String[] includes;
+	
 	/**
 	 * Ant-style exclude pattern.
 	 * 
 	 * For example **.* is all files
-	 * 
-	 * @parameter
 	 */
-	public String[] excludes;
+	@Parameter
+	private String[] excludes;
 
 	/**
 	 * Fields to print.
 	 * 
 	 * Allowed fields: name, size, creationTime, lastModifiedFile
-	 * 
-	 * @parameter
 	 */
-	public Field[] fields = { Field.name };
+	@Parameter
+	private Field[] fields = { Field.name };
 
 	/**
 	 * xml or json (default)
-	 * 
-	 * @parameter default-value="json"
 	 */
-	public String type;
+	@Parameter(defaultValue="json")
+	private String type;
 
 	/**
 	 * Whether to ignore case
-	 * 
-	 * @parameter default-value=false
-	 */
-	public boolean caseSensitive;
+	 */ 
+	@Parameter(defaultValue="false")
+	private boolean caseSensitive;
 
 	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
-
+	public void execute() throws MojoExecutionException, MojoFailureException
+	{
 		if ("xml".equals(type))
 			this.outputFile = this.outputFile.replace(".json", ".xml");
 
@@ -230,5 +221,61 @@ public class ListMojo extends AbstractMojo {
 		} catch (IOException | TransformerFactoryConfigurationError | TransformerException ex) {
 			throw new MojoExecutionException("Could not write output file", ex);
 		}
+	}
+
+	public String getOutputFile() {
+		return outputFile;
+	}
+
+	public void setOutputFile(String outputFile) {
+		this.outputFile = outputFile;
+	}
+
+	public String getBaseDir() {
+		return baseDir;
+	}
+
+	public void setBaseDir(String baseDir) {
+		this.baseDir = baseDir;
+	}
+
+	public String[] getIncludes() {
+		return includes;
+	}
+
+	public void setIncludes(String[] includes) {
+		this.includes = includes;
+	}
+
+	public String[] getExcludes() {
+		return excludes;
+	}
+
+	public void setExcludes(String[] excludes) {
+		this.excludes = excludes;
+	}
+
+	public Field[] getFields() {
+		return fields;
+	}
+
+	public void setFields(Field[] fields) {
+		this.fields = fields;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public boolean isCaseSensitive() {
+		return caseSensitive;
+	}
+
+	public void setCaseSensitive(boolean caseSensitive) {
+		this.caseSensitive = caseSensitive;
 	}
 }
